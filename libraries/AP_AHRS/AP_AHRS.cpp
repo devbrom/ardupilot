@@ -1819,6 +1819,7 @@ AP_AHRS::EKFType AP_AHRS::active_EKF_type(void) const
         }
 #endif
         if (hal.util->get_soft_armed() &&
+            (_gps_use != GPSUse::Disable) &&
             (!filt_state.flags.using_gps ||
              !filt_state.flags.horiz_pos_abs) &&
             should_use_gps &&
@@ -1853,7 +1854,10 @@ AP_AHRS::EKFType AP_AHRS::active_EKF_type(void) const
                     return ret;
                 }
             }
-            return EKFType::NONE;
+            if (should_use_gps) {
+                // ignore the EKF and use GPS directly ... unless we've explicitly disabled it
+                return EKFType::NONE;
+            }
         }
     }
     return ret;

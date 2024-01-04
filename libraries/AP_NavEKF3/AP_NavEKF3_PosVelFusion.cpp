@@ -527,17 +527,19 @@ void NavEKF3_core::SelectVelPosFusion()
         // mark a source reset as consumed
         posxy_source_reset = false;
 
-        // record the ID of the GPS that we are using for the reset
-        last_gps_idx = gpsDataDelayed.sensor_idx;
+        if (posxy_source != AP_NavEKF_Source::SourceXY::EXTNAV) {
+            // record the ID of the GPS that we are using for the reset
+            last_gps_idx = gpsDataDelayed.sensor_idx;
 
-        // reset the position to the GPS position
-        const Location gpsloc{gpsDataDelayed.lat, gpsDataDelayed.lng, 0, Location::AltFrame::ABSOLUTE};
-        const Vector2F posxy = EKF_origin.get_distance_NE_ftype(gpsloc);
-        ResetPositionNE(posxy.x, posxy.y);
+            // reset the position to the GPS position
+            const Location gpsloc{gpsDataDelayed.lat, gpsDataDelayed.lng, 0, Location::AltFrame::ABSOLUTE};
+            const Vector2F posxy = EKF_origin.get_distance_NE_ftype(gpsloc);
+            ResetPositionNE(posxy.x, posxy.y);
 
-        // If we are also using GPS as the height reference, reset the height
-        if (activeHgtSource == AP_NavEKF_Source::SourceZ::GPS) {
-            ResetPositionD(-hgtMea);
+            // If we are also using GPS as the height reference, reset the height
+            if (activeHgtSource == AP_NavEKF_Source::SourceZ::GPS) {
+                ResetPositionD(-hgtMea);
+            }
         }
     }
 
@@ -546,10 +548,10 @@ void NavEKF3_core::SelectVelPosFusion()
     if (extNavDataToFuse && (PV_AidingMode == AID_ABSOLUTE) && (posxy_source == AP_NavEKF_Source::SourceXY::EXTNAV) && (extNavDataDelayed.posReset || posxy_source_reset)) {
         // mark a source reset as consumed
         posxy_source_reset = false;
-        ResetPositionNE(extNavDataDelayed.pos.x, extNavDataDelayed.pos.y);
-        if (activeHgtSource == AP_NavEKF_Source::SourceZ::EXTNAV) {
-            ResetPositionD(-hgtMea);
-        }
+        // ResetPositionNE(extNavDataDelayed.pos.x, extNavDataDelayed.pos.y);
+        // if (activeHgtSource == AP_NavEKF_Source::SourceZ::EXTNAV) {
+        //     ResetPositionD(-hgtMea);
+        // }
     }
 #endif // EK3_FEATURE_EXTERNAL_NAV
 
@@ -624,6 +626,7 @@ void NavEKF3_core::FuseVelPosNED()
     if (fuseVelData || fusePosData || fuseHgtData) {
         // calculate additional error in GPS position caused by manoeuvring
         ftype posErr = frontend->gpsPosVarAccScale * accNavMag;
+        const AP_NavEKF_Source::SourceXY posxy_source = frontend->sources.getPosXYSource();
 
         // To-Do: this posErr should come from external nav when fusing external nav position
 
@@ -643,12 +646,12 @@ void NavEKF3_core::FuseVelPosNED()
             R_OBS[4] = R_OBS[0];
             for (uint8_t i=0; i<=2; i++) R_OBS_DATA_CHECKS[i] = R_OBS[i];
         } else {
-            if (gpsSpdAccuracy > 0.0f) {
+            if (gpsSpdAccuracy > 0.0f && posxy_source == AP_NavEKF_Source::SourceXY::GPS) {
                 // use GPS receivers reported speed accuracy if available and floor at value set by GPS velocity noise parameter
                 R_OBS[0] = sq(constrain_ftype(gpsSpdAccuracy, frontend->_gpsHorizVelNoise, 50.0f));
                 R_OBS[2] = sq(constrain_ftype(gpsSpdAccuracy, frontend->_gpsVertVelNoise, 50.0f));
 #if EK3_FEATURE_EXTERNAL_NAV
-            } else if (extNavVelToFuse) {
+            } else if (extNavVelToFuse && posxy_source == AP_NavEKF_Source::SourceXY::EXTNAV) {
                 R_OBS[2] = R_OBS[0] = sq(constrain_ftype(extNavVelDelayed.err, 0.05f, 5.0f));
 #endif
             } else {
@@ -658,11 +661,12 @@ void NavEKF3_core::FuseVelPosNED()
             }
             R_OBS[1] = R_OBS[0];
             // Use GPS reported position accuracy if available and floor at value set by GPS position noise parameter
-            if (gpsPosAccuracy > 0.0f) {
+            if (false) {
                 R_OBS[3] = sq(constrain_ftype(gpsPosAccuracy, frontend->_gpsHorizPosNoise, 100.0f));
 #if EK3_FEATURE_EXTERNAL_NAV
-            } else if (extNavUsedForPos) {
-                R_OBS[3] = sq(constrain_ftype(extNavDataDelayed.posErr, 0.01f, 10.0f));
+                
+            } else if (extNavUsedForPos && posxy_source == AP_NavEKF_Source::SourceXY::EXTNAV) {
+                R_OBS[3] = extNavDataDelayed.posErr;
 #endif
             } else {
                 R_OBS[3] = sq(constrain_ftype(frontend->_gpsHorizPosNoise, 0.1f, 10.0f)) + sq(posErr);
@@ -673,7 +677,7 @@ void NavEKF3_core::FuseVelPosNED()
             // plus a margin for manoeuvres. It is better to reject GPS horizontal velocity errors early
             ftype obs_data_chk;
 #if EK3_FEATURE_EXTERNAL_NAV
-            if (extNavVelToFuse) {
+            if (extNavVelToFuse && posxy_source == AP_NavEKF_Source::SourceXY::EXTNAV) {
                 obs_data_chk = sq(constrain_ftype(extNavVelDelayed.err, 0.05f, 5.0f)) + sq(frontend->extNavVelVarAccScale * accNavMag);
             } else
 #endif
@@ -752,8 +756,7 @@ void NavEKF3_core::FuseVelPosNED()
             if (posCheckPassed || posTimeout || badIMUdata) {
                 // if timed out or outside the specified uncertainty radius, reset to the external sensor
                 // if velocity drift is being constrained, dont reset until gps passes quality checks
-                const bool posVarianceIsTooLarge = (frontend->_gpsGlitchRadiusMax > 0) && (P[8][8] + P[7][7]) > sq(ftype(frontend->_gpsGlitchRadiusMax));
-                if (posTimeout || posVarianceIsTooLarge) {
+                if (false) {
                     // reset the position to the current external sensor position
                     ResetPosition(resetDataSource::DEFAULT);
 

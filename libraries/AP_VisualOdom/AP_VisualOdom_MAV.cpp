@@ -29,8 +29,8 @@ void AP_VisualOdom_MAV::handle_vision_position_estimate(uint64_t remote_time_us,
     const float scale_factor =  _frontend.get_pos_scale();
     Vector3f pos{x * scale_factor, y * scale_factor, z * scale_factor};
 
-    posErr = constrain_float(posErr, _frontend.get_pos_noise(), 100.0f);
-    angErr = constrain_float(angErr, _frontend.get_yaw_noise(), 1.5f);
+    // posErr = constrain_float(posErr, _frontend.get_pos_noise(), 100.0f);
+    // angErr = constrain_float(angErr, _frontend.get_yaw_noise(), 1.5f);
     // send attitude and position to EKF
     AP::ahrs().writeExtNavData(pos, attitude, posErr, angErr, time_ms, _frontend.get_delay_ms(), get_reset_timestamp_ms(reset_counter));
 
