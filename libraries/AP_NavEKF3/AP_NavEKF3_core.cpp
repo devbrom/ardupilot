@@ -489,13 +489,21 @@ function, but is perfomred later and initiated the SelectMagFusion() function
 after the tilt has stabilised.
 */
 
+bool NavEKF3_core::InitialiseFilterBootstrap(bool force)
+{
+    if (force) {
+        statesInitialised = false;
+    }
+    return InitialiseFilterBootstrap();
+}
+
 bool NavEKF3_core::InitialiseFilterBootstrap(void)
 {
     // update sensor selection (for affinity)
     update_sensor_selection();
 
     // If we are a plane and don't have GPS lock then don't initialise
-    if (assume_zero_sideslip() && dal.gps().status(preferred_gps) < AP_DAL_GPS::GPS_OK_FIX_3D) {
+    if (assume_zero_sideslip() && dal.gps().status(preferred_gps) < AP_DAL_GPS::GPS_OK_FIX_3D && frontend->sources.getPosXYSource() == AP_NavEKF_Source::SourceXY::GPS) {
         dal.snprintf(prearm_fail_string,
                      sizeof(prearm_fail_string),
                      "EKF3 init failure: No GPS lock");

@@ -47,6 +47,7 @@ public:
 
     // Initialise the filter
     bool InitialiseFilter(void);
+    bool InitialiseFilter(bool force);
 
     // Update Filter States - this should be called whenever new IMU data is available
     void UpdateFilter(void);

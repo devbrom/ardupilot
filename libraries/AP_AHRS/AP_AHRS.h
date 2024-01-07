@@ -86,6 +86,7 @@ public:
 
     void            update(bool skip_ins_update=false);
     void            reset();
+    void            reset(bool force);
 
     // dead-reckoning support
     bool get_location(Location &loc) const;

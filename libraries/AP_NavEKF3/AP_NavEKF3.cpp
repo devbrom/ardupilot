@@ -743,9 +743,13 @@ NavEKF3::NavEKF3()
     AP_Param::setup_object_defaults(this, var_info2);
 }
 
+bool NavEKF3::InitialiseFilter(void)
+{
+    return InitialiseFilter(false);
+}
 
 // Initialise the filter
-bool NavEKF3::InitialiseFilter(void)
+bool NavEKF3::InitialiseFilter(bool force)
 {
     if (_enable == 0 || _imuMask == 0) {
         return false;
@@ -852,7 +856,7 @@ bool NavEKF3::InitialiseFilter(void)
     // initialise successfully
     bool ret = true;
     for (uint8_t i=0; i<num_cores; i++) {
-        ret &= core[i].InitialiseFilterBootstrap();
+        ret &= core[i].InitialiseFilterBootstrap(force);
     }
 
     // set last time the cores were primary to 0

@@ -649,6 +649,11 @@ void AP_AHRS::update_external(void)
 
 void AP_AHRS::reset()
 {
+    reset(false);
+}
+
+void AP_AHRS::reset(bool force)
+{
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
 
@@ -659,12 +664,12 @@ void AP_AHRS::reset()
 
 #if HAL_NAVEKF2_AVAILABLE
     if (_ekf2_started) {
-        _ekf2_started = EKF2.InitialiseFilter();
+        _ekf2_started = EKF2.InitialiseFilter(force);
     }
 #endif
 #if HAL_NAVEKF3_AVAILABLE
     if (_ekf3_started) {
-        _ekf3_started = EKF3.InitialiseFilter();
+        _ekf3_started = EKF3.InitialiseFilter(force);
     }
 #endif
 }

@@ -607,9 +607,13 @@ NavEKF2::NavEKF2()
     AP_Param::setup_object_defaults(this, var_info);
 }
 
+bool NavEKF2::InitialiseFilter(void)
+{
+    return InitialiseFilter(false);
+}
 
 // Initialise the filter
-bool NavEKF2::InitialiseFilter(void)
+bool NavEKF2::InitialiseFilter(bool force)
 {
     AP::dal().start_frame(AP_DAL::FrameType::InitialiseFilterEKF2);
 
@@ -709,7 +713,7 @@ bool NavEKF2::InitialiseFilter(void)
     // initialise successfully
     bool ret = true;
     for (uint8_t i=0; i<num_cores; i++) {
-        ret &= core[i].InitialiseFilterBootstrap();
+        ret &= core[i].InitialiseFilterBootstrap(force);
     }
 
     // zero the structs used capture reset events

@@ -365,6 +365,14 @@ void NavEKF2_core::InitialiseVariablesMag()
     storedMag.reset();
 }
 
+bool NavEKF2_core::InitialiseFilterBootstrap(bool force)
+{
+    if (force) {
+        statesInitialised = false;
+    }
+    return InitialiseFilterBootstrap();
+}
+
 // Initialise the states from accelerometer and magnetometer data (if present)
 // This method can only be used when the vehicle is static
 bool NavEKF2_core::InitialiseFilterBootstrap(void)
